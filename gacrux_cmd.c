@@ -109,7 +109,7 @@ static int uartconf_cmd_create(uint8_t *buf, uint32_t buf_len,
 static int uartconf_res_check(uint8_t *res, uint32_t res_len);
 static int i2cconf_cmd_create(uint8_t *buf, uint32_t buf_len,
                               uint8_t speed);
-static int i2cwrite_cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
+static int cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
                                uint16_t opr_len);
 static int i2cconf_res_check(uint8_t *res, uint32_t res_len);
 static int spiconf_cmd_create(uint8_t *buf, uint32_t buf_len,
@@ -499,7 +499,7 @@ static int i2cconf_cmd_create(uint8_t *buf, uint32_t buf_len,
   return 0;
 }
 
-static int i2cwrite_cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
+static int cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
                                 uint16_t opr_len)
 {
   if (!buf || (OprLength[bin_cmd] == -99))
@@ -1096,7 +1096,7 @@ int gacrux_cmd_i2cwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
   uint8_t buf[GHIFP_HEADER_SIZE + ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):GHIFP_HEADER_SIZE)];
 
   if (OprLength[bin_cmd] == opr_len) {
-    i2cwrite_cmd_create(buf, bin_cmd, opr, opr_len);
+    cmd_create(buf, bin_cmd, opr, opr_len);
     for (int j = 0; j < ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):5); j++)
     {
       printf("%x ", buf[j]);
@@ -1219,7 +1219,7 @@ int gacrux_cmd_spiwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
   uint8_t buf[GHIFP_HEADER_SIZE + ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):GHIFP_HEADER_SIZE)];
 
   if (OprLength[bin_cmd] == opr_len) {
-    i2cwrite_cmd_create(buf, bin_cmd, opr, opr_len);
+    cmd_create(buf, bin_cmd, opr, opr_len);
     for (int j = 0; j < ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):5); j++)
     {
       printf("%x ", buf[j]);

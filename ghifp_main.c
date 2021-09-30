@@ -292,10 +292,11 @@ int ghifp_cmd_entry(int argc, FAR char *argv[])
                                     (uint16_t)(argc - 2));
             gacrux_cmd_i2cread();
             break;
-            ////////////////////
-          // case HOST_IF_FCTRY_TYPE_SPI:
-          //   ret = gacrux_cmd_spiwrite
-          //   break;
+          case HOST_IF_FCTRY_TYPE_SPI:
+            ret = gacrux_cmd_spiwrite((uint8_t)atoi(argv[1]), opr,
+                                    (uint16_t)(argc - 2));
+            gacrux_cmd_spiread();
+            break;
           default:
             break;
           }
