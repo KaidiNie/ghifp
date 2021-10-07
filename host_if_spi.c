@@ -28,7 +28,7 @@
 #define LOCK()   pthread_mutex_lock(&g_mutex)
 #define UNLOCK() pthread_mutex_unlock(&g_mutex)
 
-#define SPI5_BUS          (5)
+#define SPI5_BUS          (4)
 
 #define SPI_DEFAULT_SPEED (2600000)
 #define SPI_DEFAULT_DFS   (8)
@@ -112,7 +112,6 @@ static int spi_recv_task(int argc, FAR char *argv[])
           continue;
         }
       // LOCK();
-      printf("Detect Bus Request.(SPI)\n");
       opr_len = 0;
 
       if (g_spi_dbg_recv != 0)
@@ -130,84 +129,52 @@ static int spi_recv_task(int argc, FAR char *argv[])
         }
       else
         {
-          /* read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE); */
-
-          /* If dfs is 16, read_len will be not header size(5byte) but 6byte.
-            It means that read data include the first byte of data part. */
-
-          /* printf("Header dump.(SPI)\n");
-          for (i=0; i<read_len; i++)
-            {
-              printf("%02X ", g_spi_local_buf[i]);
-            }
-          printf("\n"); */
-
-          /////////////////////////////////////////////////////////////////
           /* Read header. */
           read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE);
-          while (read_len <= 0)
-            {
+
+          while (read_len < 0){
               printf("Failed to read header1:%d ", read_len);
-            }
+              read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE);
+          }
 
           ret = check_header(g_spi_local_buf, &opc, &opr_len);
           if (ret != 0)
           {
             printf("Invalid header.(SPI)\n");
-            printf("Header dump.(SPI)\n");
-            for (i=0; i<read_len; i++)
-              {
-                printf("%02X ", g_spi_local_buf[i]);
-              }
-            printf("\n");
-            continue;
-          }
-          else {
-            for (i=0; i<GHIFP_HEADER_SIZE; i++)
-            {
-              printf("%d   ", opc);
-              break;
-            }
+            // for (i=0; i<read_len; i++)
+            //   {
+            //     printf("%02X ", g_spi_local_buf[i]);
+            //   }
             // printf("\n");
+            // UNLOCK();
+            continue;
+          } else {
+            printf("%d   ", opc);
           }
-          /////////////////////////////////////////////////////////////////////////////////
         }
-
+      // UNLOCK();
       /* Check header */
       ret = check_header(g_spi_local_buf, &opc, &opr_len);
-      if (ret != 0)
-        {
+      if (ret != 0) {
           printf("Invalid header.(SPI)\n");
           // UNLOCK();
           continue;
         }
 
-      /* Read data. */
-      /* read_len_tmp = read_len;
-
-      read_len =
-        spi_read(g_spi_local_buf + read_len_tmp,
-                 GHIFP_DATA_SIZE(opr_len) + GHIFP_HEADER_SIZE - read_len_tmp);
-      spi_dummy_exchange();
-
-      printf("Data dump.(SPI)\n");
-      for (i=0; i<read_len; i++)
-        {
-          printf("%02X ", g_spi_local_buf[read_len_tmp + i]);
-        }
-      printf("\n"); */
-
       int rec_size = GHIFP_DATA_SIZE(opr_len);
       int num = rec_size / 512 + ((rec_size % 512) ? 0 : -1);
+      int packet = num;
+      // printf("rec_size: %d, packet: %d\n", rec_size, num);
 
-       while(num--) {
+      while (num--)
+      {
         ret = bus_req_wait_spi();
         if (ret != 0)
           {
             printf("Failed to wait bus req:%d\n", ret);
             continue;
           }
-        // printf("Detect Bus Request.(2)\n");
+        // LOCK();
 
         read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
         while (read_len <= 0)
@@ -215,6 +182,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
             printf("Failed to read data0:%d\n", ret);
             read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
           }
+          // UNLOCK();
        }
 
       ret = bus_req_wait_spi();
@@ -222,16 +190,18 @@ static int spi_recv_task(int argc, FAR char *argv[])
         printf("Failed to wait bus req:%d\n", ret);
         continue;
       }
+      // LOCK();
 
-      read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * (int)(rec_size / 513),
+      read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
                      rec_size % 512);
-      while (ret != 0) {
+      while (read_len <= 0) {
         printf("Failed to read data:%d\n", ret);
-        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * (int)(rec_size / 513),
+        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
                      rec_size % 512);
       }
+      // UNLOCK();
 
-      for (i=0; i<GHIFP_DATA_SIZE(opr_len); i++){
+      for (i = 0; i < rec_size; i++){
           printf("%d ", g_spi_local_buf[GHIFP_HEADER_SIZE + i]);
         }
       printf("\n");
@@ -240,7 +210,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
       ret = check_data(g_spi_local_buf + GHIFP_HEADER_SIZE, opr_len);
       if (ret != 0)
         {
-          printf("Invalid data.(SPI)\n");
+          printf("Invalid data. opr len: %d (SPI)\n", opr_len);
           continue;
         }
 
@@ -260,6 +230,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
               }
         } else {
           // printf("Discard dataframe.\n");
+          // UNLOCK();
         }
       }
 

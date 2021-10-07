@@ -348,7 +348,7 @@ int bus_req_wait_spi(void)
 {
   int ret;
 
-  printf("Wait for SPI Bus Request.\n");
+  // printf("Wait for SPI Bus Request.\n");
   ret = sem_wait(&g_spi_bus_req_sem);
   if (ret != 0)
     {
