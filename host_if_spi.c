@@ -28,7 +28,7 @@
 #define LOCK()   pthread_mutex_lock(&g_mutex)
 #define UNLOCK() pthread_mutex_unlock(&g_mutex)
 
-#define SPI5_BUS          (4)
+#define SPI4_BUS          (4)
 
 #define SPI_DEFAULT_SPEED (2600000)
 #define SPI_DEFAULT_DFS   (8)
@@ -111,7 +111,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
           printf("Failed to wait bus req:%d\n", ret);
           continue;
         }
-      // LOCK();
+      LOCK();
       opr_len = 0;
 
       if (g_spi_dbg_recv != 0)
@@ -124,7 +124,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
             }
           printf("\n");
           memset(g_spi_local_buf, 0, LOCAL_BUFF_SZ);
-          // UNLOCK();
+          UNLOCK();
           continue;
         }
       else
@@ -146,18 +146,18 @@ static int spi_recv_task(int argc, FAR char *argv[])
             //     printf("%02X ", g_spi_local_buf[i]);
             //   }
             // printf("\n");
-            // UNLOCK();
+            UNLOCK();
             continue;
           } else {
             printf("%d   ", opc);
           }
         }
-      // UNLOCK();
+      UNLOCK();
       /* Check header */
       ret = check_header(g_spi_local_buf, &opc, &opr_len);
       if (ret != 0) {
           printf("Invalid header.(SPI)\n");
-          // UNLOCK();
+          UNLOCK();
           continue;
         }
 
@@ -174,7 +174,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
             printf("Failed to wait bus req:%d\n", ret);
             continue;
           }
-        // LOCK();
+        LOCK();
 
         read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
         while (read_len <= 0)
@@ -182,7 +182,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
             printf("Failed to read data0:%d\n", ret);
             read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
           }
-          // UNLOCK();
+          UNLOCK();
        }
 
       ret = bus_req_wait_spi();
@@ -190,7 +190,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
         printf("Failed to wait bus req:%d\n", ret);
         continue;
       }
-      // LOCK();
+      LOCK();
 
       read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
                      rec_size % 512);
@@ -199,7 +199,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
         read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
                      rec_size % 512);
       }
-      // UNLOCK();
+      UNLOCK();
 
       for (i = 0; i < rec_size; i++){
           printf("%d ", g_spi_local_buf[GHIFP_HEADER_SIZE + i]);
@@ -230,7 +230,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
               }
         } else {
           // printf("Discard dataframe.\n");
-          // UNLOCK();
+          UNLOCK();
         }
       }
 
@@ -356,13 +356,13 @@ static FAR struct spi_dev_s *spi_dev_init(void)
 {
   FAR struct spi_dev_s *dev = NULL;
 
-  dev = cxd56_spibus_initialize(SPI5_BUS);
+  dev = cxd56_spibus_initialize(SPI4_BUS); /* SPI5_BUS */
   if (!dev)
     {
       printf("Failed to initialize SPI.\n");
       return NULL;
     }
-  CXD56_PIN_CONFIGS(PINCONFS_EMMCA_SPI5);
+  CXD56_PIN_CONFIGS(PINCONFS_SPI4); /* PINCONFS_EMMCA_SPI5 */
 
   /* SPI settings */
 
@@ -377,7 +377,7 @@ static FAR struct spi_dev_s *spi_dev_init(void)
 
 static int spi_dev_uninit(void)
 {
-  CXD56_PIN_CONFIGS(PINCONFS_EMMCA_GPIO);
+  CXD56_PIN_CONFIGS(PINCONFS_SPI4_GPIO); /* PINCONFS_EMMCA_GPIO */
 
   return 0;
 }
