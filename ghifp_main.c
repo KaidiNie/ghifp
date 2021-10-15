@@ -292,11 +292,24 @@ int ghifp_cmd_entry(int argc, FAR char *argv[])
                                     (uint16_t)(argc - 2));
             gacrux_cmd_i2cread();
             break;
-          case HOST_IF_FCTRY_TYPE_SPI:
-            ret = gacrux_cmd_spiwrite((uint8_t)atoi(argv[1]), opr,
-                                    (uint16_t)(argc - 2));
-            gacrux_cmd_spiread();
+          case HOST_IF_FCTRY_TYPE_SPI: {
+            uint8_t bin_cmd = (uint8_t)atoi(argv[1]);
+            ret = gacrux_cmd_spiwrite(bin_cmd, opr, (uint16_t)(argc - 2));
+            int res_len = gacrux_cmd_spiread();
+
+            if (res_len < 0 && bin_cmd == 0 && (opr[0] == 2))
+            {
+              int retry = 1;
+              while (res_len < 0 && retry < 10)
+              {
+                ret = gacrux_cmd_spiwrite(bin_cmd, opr, (uint16_t)(argc - 2));
+                res_len = gacrux_cmd_spiread();
+                printf("RETRY: %d\n", retry);
+                retry++;
+              }
+            }
             break;
+          }
           default:
             break;
           }
