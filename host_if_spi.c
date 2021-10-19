@@ -162,28 +162,6 @@ static int spi_recv_task(int argc, FAR char *argv[])
         }
 
       int rec_size = GHIFP_DATA_SIZE(opr_len);
-      int num = rec_size / 512 + ((rec_size % 512) ? 0 : -1);
-      int packet = num;
-      // printf("rec_size: %d, packet: %d\n", rec_size, num);
-
-      while (num--)
-      {
-        ret = bus_req_wait_spi();
-        if (ret != 0)
-          {
-            printf("Failed to wait bus req:%d\n", ret);
-            continue;
-          }
-        LOCK();
-
-        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
-        while (read_len <= 0)
-          {
-            printf("Failed to read data0:%d\n", ret);
-            read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, 512);
-          }
-          UNLOCK();
-       }
 
       ret = bus_req_wait_spi();
       if (ret != 0) {
@@ -192,12 +170,10 @@ static int spi_recv_task(int argc, FAR char *argv[])
       }
       LOCK();
 
-      read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
-                     rec_size % 512);
+      read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
       while (read_len <= 0) {
         printf("Failed to read data:%d\n", ret);
-        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + 512 * packet,
-                     rec_size % 512);
+        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
       }
       UNLOCK();
 

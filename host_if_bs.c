@@ -30,7 +30,7 @@
 #define MQUEUE_MSG_MAX (8)
 #define MQUEUE_MODE    0666
 
-#define RECV_TIMEOUT_SEC (1) /* Change from 3 for spi wake up test */
+#define RECV_TIMEOUT_SEC (3) /* Change from 3 for spi wake up test */
 
 #define BUS_REQ (PIN_PWM0)
 
@@ -77,7 +77,7 @@ static int bus_req_handler(int irq, FAR void *context, FAR void *arg)
 
   if (g_hif_type == HOST_IF_FCTRY_TYPE_SPI)
     {
-
+      // printf("bus! %d\n", g_spi_bus_req_sem.semcount);
       ret = sem_post(&g_spi_bus_req_sem);
       if (ret < 0)
         {
