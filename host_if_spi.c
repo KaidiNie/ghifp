@@ -31,7 +31,11 @@
 #define SPI4_BUS          (4)
 
 #define SPI_DEFAULT_SPEED (2600000)
+#ifdef Bit16Test
+#define SPI_DEFAULT_DFS   (16)
+#else
 #define SPI_DEFAULT_DFS   (8)
+#endif
 
  /****************************************************************************
  * Private Types
@@ -45,7 +49,7 @@ static int change_dfs_old(int dfs);
 static int32_t conv_spi_clk_number(int clk_no);
 static int set_clock(int clock);
 static int spi_write(FAR uint8_t *data, uint32_t sz);
-static int spi_read(FAR uint8_t *buf, uint32_t sz);
+static int spi_read(FAR uint8_t *buf, uint32_t sz, int test);
 static int spi_dummy_exchange(void);
 static int host_if_spi_write(
   FAR struct host_if_s *thiz, FAR uint8_t *data, uint32_t sz);
@@ -94,7 +98,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
   int         read_len_tmp;
   uint8_t     opc;
   uint16_t    opr_len;
-
+  int         finished_size = 0;
   memset(g_spi_local_buf, 0, LOCAL_BUFF_SZ);
   printf("SPI frequency(recv):%u\n", g_spi_freq);
 
@@ -105,6 +109,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
 
   while (1)
     {
+      // printf("(1)\n");
       ret = bus_req_wait_spi();
       if (ret != 0)
         {
@@ -112,11 +117,12 @@ static int spi_recv_task(int argc, FAR char *argv[])
           continue;
         }
       LOCK();
+      // up_mdelay(1);
       opr_len = 0;
 
       if (g_spi_dbg_recv != 0)
         {
-          read_len = spi_read(g_spi_local_buf, 256);
+          read_len = spi_read(g_spi_local_buf, 256, 0);
           printf("Data dump.\n");
           for (i=0; i<256; i++)
             {
@@ -130,64 +136,134 @@ static int spi_recv_task(int argc, FAR char *argv[])
       else
         {
           /* Read header. */
-          read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE);
+          read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE, 0);
 
           while (read_len < 0){
               printf("Failed to read header1:%d ", read_len);
-              read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE);
+              read_len = spi_read(g_spi_local_buf, GHIFP_HEADER_SIZE, 0);
           }
+
+          finished_size = read_len;
 
           ret = check_header(g_spi_local_buf, &opc, &opr_len);
           if (ret != 0)
           {
             printf("Invalid header.(SPI)\n");
-            // for (i=0; i<read_len; i++)
-            //   {
-            //     printf("%02X ", g_spi_local_buf[i]);
-            //   }
-            // printf("\n");
+            for (i = 0; i < read_len; i++)
+              {
+                printf("%02X ", g_spi_local_buf[i]);
+              }
+            printf("\n");
             UNLOCK();
-            continue;
           } else {
-            printf("%d   ", opc);
+            printf("%d  ", opc);
           }
         }
       UNLOCK();
-      /* Check header */
-      ret = check_header(g_spi_local_buf, &opc, &opr_len);
-      if (ret != 0) {
-          printf("Invalid header.(SPI)\n");
-          UNLOCK();
+
+      // for data split method, temporary comment out
+      // int rec_size = GHIFP_DATA_SIZE(opr_len);
+      // ret = bus_req_wait_spi();
+      // if (ret != 0) {
+      //   printf("Failed to wait bus req:%d\n", ret);
+      //   continue;
+      // }
+      // LOCK();
+
+      // up_mdelay(2);
+
+      // one time read no delay
+      // read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
+      // if (read_len != rec_size)
+      // {
+      //   printf("Failed to read data:%d\n", ret);
+      //   }
+
+      // add delay
+      // int remain_size = rec_size;
+      // int sent_size = 0;
+      // while (remain_size) {
+      //   int send_size = (remain_size < 20) ? remain_size : 20;
+      //   read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + sent_size, send_size);
+      //   sent_size += send_size;
+      //   remain_size -= send_size;
+      //   up_mdelay(1);
+      // }
+
+      // send every 1024byte
+      int rec_size = GHIFP_DATA_SIZE(opr_len) + GHIFP_HEADER_SIZE;
+
+#ifdef Bit16Test
+      int align = (rec_size % 2) ? 1 : 0;
+      rec_size += (align + 2);
+#else
+      // rec_size += 1;
+#endif
+
+      int num = rec_size / 1024 + ((rec_size % 1024) ? 0 : -1);
+      int first = 1;
+
+      while (num--) {
+        printf("num:%d\n", num);
+        if (first) {
+          ret = spi_read(g_spi_local_buf + finished_size, 1024 - finished_size, 0);
+          while (ret != 1024 - finished_size) {
+            printf("Failed to read data0:%d\n", ret);
+            ret = spi_read(g_spi_local_buf + finished_size, 1024 - finished_size, 0);
+          }
+          first = 0;
+          finished_size += 1024 - finished_size;
+        }
+        else
+        {
+          ret = spi_read(g_spi_local_buf + finished_size, 1024, 0);
+          while (ret != 0)
+            {
+              printf("Failed to read data0:%d\n", ret);
+              ret = spi_read(g_spi_local_buf + finished_size, 1024, 0);
+            }
+            finished_size += 1024;
+        }
+        ret = bus_req_wait_spi();
+         if (ret != 0) {
+          printf("Failed to wait bus req:%d\n", ret);
           continue;
         }
-
-      int rec_size = GHIFP_DATA_SIZE(opr_len);
-
-      ret = bus_req_wait_spi();
-      if (ret != 0) {
-        printf("Failed to wait bus req:%d\n", ret);
-        continue;
       }
-      LOCK();
 
-      read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
-      while (read_len <= 0) {
-        printf("Failed to read data:%d\n", ret);
-        read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
+      int read_size = rec_size % 1024;
+      if (first) {
+        read_size = (rec_size - finished_size) % 1024;
+      }
+
+      if (opc == 128) {
+        ret = spi_read(g_spi_local_buf + finished_size, read_size, 0);
+      } else {
+        ret = spi_read(g_spi_local_buf + finished_size, read_size, 0);
+      }
+
+      if (ret < 0) {
+        printf("Failed to read data:%d, read_size: %d\n", ret, read_size);
+        // ret = spi_read(g_spi_local_buf + finished_size, read_size, 0);
       }
       UNLOCK();
-
-      for (i = 0; i < rec_size; i++){
-          printf("%d ", g_spi_local_buf[GHIFP_HEADER_SIZE + i]);
-        }
-      printf("\n");
 
       /* Check data */
       ret = check_data(g_spi_local_buf + GHIFP_HEADER_SIZE, opr_len);
       if (ret != 0)
         {
           printf("Invalid data. opr len: %d (SPI)\n", opr_len);
+          for (i = 0; i < rec_size; i++){
+            printf("%d ", g_spi_local_buf[i]);
+          }
+          printf("\n");
           continue;
+        } else {
+          // for (i = 0; i < rec_size - GHIFP_HEADER_SIZE; i++){
+          //   printf("%d ", g_spi_local_buf[GHIFP_HEADER_SIZE + i]);
+          // }
+          // printf("\n");
+          printf("opr_len: %d\n", opr_len);
         }
 
       if (true == is_evt_data(opc)) {
@@ -209,45 +285,6 @@ static int spi_recv_task(int argc, FAR char *argv[])
           UNLOCK();
         }
       }
-
-      /* Check data */
-      // ret = check_data(g_spi_local_buf + GHIFP_HEADER_SIZE, opr_len);
-      // if (ret != 0)
-      //   {
-      //     printf("Invalid data.(SPI)\n");
-      //     UNLOCK();
-      //     continue;
-      //   }
-
-      // if (true == is_evt_data(opc))
-      //   {
-      //     /* OPC type -> Event, notify by callback. */
-      //     if (g_evt_cb)
-      //       {
-      //         g_evt_cb(g_spi_local_buf,
-      //                  GHIFP_FRAME_SIZE(opr_len));
-      //       }
-      //   }
-      // else
-      //   {
-      //     /* OPC type -> Normal response, push to queue. */
-      //     if (get_host_if_state() == HOST_IF_STATE_WAIT_RESPONSE)
-      //       {
-      //         ret = push_dataframe(g_spi_local_buf,
-      //                              GHIFP_FRAME_SIZE(opr_len));
-      //         if (ret != 0)
-      //           {
-      //             printf("Failed to push dataframe.\n");
-      //             UNLOCK();
-      //             continue;
-      //           }
-      //       }
-      //     else
-      //       {
-      //         printf("Discard dataframe.\n");
-      //       }
-      //   }
-      // UNLOCK();
     }
 
   printf("Entering abnormal loop.\n");
@@ -284,14 +321,24 @@ static int spi_write(FAR uint8_t *data, uint32_t sz)
     }
 }
 
-static int spi_read(FAR uint8_t *buf, uint32_t sz)
+static int spi_read(FAR uint8_t *buf, uint32_t sz, int test)
 {
   uint32_t read_len;
 
-  if (g_spi_dfs == SPI_DEFAULT_DFS)
+  if (g_spi_dfs == 8)
     {
       read_len = sz;
-      SPI_EXCHANGE(g_dev, NULL, buf, read_len);
+      if (test) {
+        uint8_t tx_buf[read_len];
+        tx_buf[0] = 0x7f;
+        tx_buf[1] = 0x0;
+        tx_buf[2] = 0x0;
+        tx_buf[3] = 0x6;
+        tx_buf[4] = 0x85;
+        SPI_EXCHANGE(g_dev, tx_buf, buf, read_len);
+      } else {
+        SPI_EXCHANGE(g_dev, NULL, buf, read_len);
+      }
       return (int)sz;
     }
   else if (g_spi_dfs == 16)
@@ -487,31 +534,31 @@ static int set_clock(int clk_no)
 static int host_if_spi_write(
   FAR struct host_if_s *thiz, FAR uint8_t *data, uint32_t sz)
 {
-  int                 ret = -EINVAL;
-  uint8_t             opc;
-  uint16_t            opr_len;
+  // int                 ret = -EINVAL;
+  // uint8_t             opc;
+  // uint16_t            opr_len;
 
-  printf("host_if_spi_write() len=%d\n", sz);
+  // printf("host_if_spi_write() len=%d\n", sz);
 
-  if (!thiz || !data || !sz)
-    {
-      return ret;
-    }
+  // if (!thiz || !data || !sz)
+  //   {
+  //     return ret;
+  //   }
 
-  if (!g_dev)
-    {
-      return -EPERM;
-    }
+  // if (!g_dev)
+  //   {
+  //     return -EPERM;
+  //   }
 
-  if (0 != check_header(data, &opc, &opr_len))
-    {
-      return ret;
-    }
+  // if (0 != check_header(data, &opc, &opr_len))
+  //   {
+  //     return ret;
+  //   }
 
-  if (0 != check_data(data + GHIFP_HEADER_SIZE, opr_len))
-    {
-      return ret;
-    }
+  // if (0 != check_data(data + GHIFP_HEADER_SIZE, opr_len))
+  //   {
+  //     return ret;
+  //   }
 
   LOCK();
   spi_write(data, sz);
@@ -573,15 +620,15 @@ static int host_if_spi_transaction(
       return -EPERM;
     }
 
-  if (0 != check_header(data, &opc, &opr_len))
-    {
-      return ret;
-    }
+  // if (0 != check_header(data, &opc, &opr_len))
+  //   {
+  //     return ret;
+  //   }
 
-  if (0 != check_data(data + GHIFP_HEADER_SIZE, opr_len))
-    {
-      return ret;
-    }
+  // if (0 != check_data(data + GHIFP_HEADER_SIZE, opr_len))
+  //   {
+  //     return ret;
+  //   }
 
   LOCK();
   spi_write(data, w_sz);

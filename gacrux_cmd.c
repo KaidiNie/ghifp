@@ -131,9 +131,9 @@ static int8_t OprLength[160] = {
     [0x25] = -99, [0x26] = -99, [0x27] = -99, [0x28] = -99, [0x29] = -99,
     [0x2a] = -99, [0x2b] = -99, [0x2c] = -99, [0x2d] = -99, [0x2e] = -99,
     [0x2f] = -99,
-    [0x30] = 1, [0x31] = 0, [0x32] = 2, [0x33] = 0, [0x34] = 4,
+    [0x30] = 1, [0x31] = 0, [0x32] = 2, [0x33] = 0, [0x34] = -99,
     [0x35] = 12, [0x36] = 8, [0x37] = 4, [0x38] = 0, [0x39] = 2,
-    [0x3a] = 7, [0x3b] = 0, [0x3c] = 3, [0x3d] = 3, [0x3e] = 1,
+    [0x3a] = 7, [0x3b] = 0, [0x3c] = 3, [0x3d] = 5, [0x3e] = 1,
     [0x3f] = 1,
     [0x40] = 3, [0x41] = 1, [0x42] = 11, [0x43] = 0, [0x44] = 6,
     [0x45] = -99, [0x46] = -99, [0x47] = -99, [0x48] = -99, [0x49] = -99,
@@ -502,10 +502,10 @@ static int i2cconf_cmd_create(uint8_t *buf, uint32_t buf_len,
 static int cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
                                 uint16_t opr_len)
 {
-  if (!buf || (OprLength[bin_cmd] == -99))
-    {
-      return -EINVAL;
-    }
+  // if (!buf || (OprLength[bin_cmd] == -99))
+  //   {
+  //     return -EINVAL;
+  //   }
 
   buf[GHIFP_SYNC_OFFSET]       = GHIFP_SYNC;
   *(uint16_t *)&buf[GHIFP_OPR_LEN_OFFSET] = opr_len;
@@ -513,11 +513,11 @@ static int cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
   buf[GHIFP_H_CHECKSUM_OFFSET] = calc_checksum(buf, 4);
 
   if (opr_len > 0) {
-    for (int i = 0; i < OprLength[bin_cmd]; i++) {
+    for (int i = 0; i < opr_len; i++) {
       buf[GHIFP_OPR_OFFSET + i] = opr[i];
       // printf("--- opr[%d] = %d ---\n", i, opr[i]);
     }
-    buf[GHIFP_D_CHECKSUM_OFFSET(OprLength[bin_cmd])]
+    buf[GHIFP_D_CHECKSUM_OFFSET(opr_len)]
                               = calc_checksum(&buf[GHIFP_OPR_OFFSET], opr_len);
   }
   return 0;
@@ -1110,7 +1110,7 @@ int gacrux_cmd_i2cwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
 
   if(opr_len == 0){
     ret = host->write(host, buf, GHIFP_HEADER_SIZE);
-  }else {
+  } else {
     ret = host->write(host, buf, GHIFP_HEADER_SIZE+GHIFP_DATA_SIZE(opr_len));
   }
   printf("write ret : %d\n", ret);
@@ -1218,7 +1218,7 @@ int gacrux_cmd_spiwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
 
   uint8_t buf[GHIFP_HEADER_SIZE + ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):GHIFP_HEADER_SIZE)];
 
-  if (OprLength[bin_cmd] == opr_len) {
+  if (OprLength[bin_cmd] == opr_len || OprLength[bin_cmd] < 0) {
     cmd_create(buf, bin_cmd, opr, opr_len);
     for (int j = 0; j < ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):5); j++)
     {
@@ -1231,12 +1231,25 @@ int gacrux_cmd_spiwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
   }
   host = host_if_fctry_get_obj(g_hif_type);
 
-  if(opr_len == 0){
-    ret = host->write(host, buf, GHIFP_HEADER_SIZE);
-  }else {
-    ret = host->write(host, buf, GHIFP_HEADER_SIZE+GHIFP_DATA_SIZE(opr_len));
+  // if(opr_len == 0){
+  //   ret = host->write(host, buf, GHIFP_HEADER_SIZE);
+  // } else {
+  //   ret = host->write(host, buf, GHIFP_HEADER_SIZE+GHIFP_DATA_SIZE(opr_len));
+  // }
+
+  ret = host->write(host, buf, GHIFP_HEADER_SIZE);
+  up_mdelay(5);
+  if (opr_len != 0) {
+#ifdef Bit16Test
+    int send_size = GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len) - ret;
+    if (send_size) {
+      ret = host->write(host, buf + ret, send_size);
+    }
+#else
+    ret = host->write(host, buf + GHIFP_HEADER_SIZE, GHIFP_DATA_SIZE(opr_len));
+#endif
   }
-  printf("write ret : %d\n", ret);
+  // up_mdelay(5);
   return ret;
 }
 
@@ -1638,9 +1651,15 @@ int gacrux_cmd_bin_input(uint8_t input, const char *fw_path)
       *(uint16_t *)&cmd[GHIFP_OPR_LEN_OFFSET]          = pkt_len + 3;
       cmd[GHIFP_OPC_OFFSET]                            = TX_BIN_OPC;
       cmd[GHIFP_H_CHECKSUM_OFFSET]                     = calc_checksum(cmd, 4);
+
+      /* Send header */
+      ret = host->write(host, cmd, GHIFP_HEADER_SIZE);
+      up_mdelay(5);
+
+      /* Send data */
       *(uint8_t *)&cmd[5] = input;
       *(uint8_t *)&cmd[6] = loop_num;
-      *(uint16_t *)&cmd[7]       = i+1;
+      *(uint16_t *)&cmd[7] = i+1;
 
       ret = read(fd, &cmd[8], pkt_len);
        printf("pkt_len:%d \n", pkt_len);
@@ -1657,21 +1676,22 @@ int gacrux_cmd_bin_input(uint8_t input, const char *fw_path)
       /* -- Create command -- */
 
       printf("Packet(%d/%d) fw part size:%d\n", i+1, loop_num, pkt_len);
-
-      ret = host->transaction(host, cmd, pkt_len + 9,
+      ret = host->transaction(host, cmd + GHIFP_HEADER_SIZE, pkt_len + 4,
                           g_recv_buff, RECV_BUFF_SZ, &res_len);
+      // ret = host->write(host, cmd + GHIFP_HEADER_SIZE,  pkt_len + 4);
       if (ret != 0)
         {
           printf("Transaction error:%d\n", ret);
           break;
         }
 
-      ret = bin_input_res_check(g_recv_buff, res_len);
-      if (ret != 0)
-        {
-          printf("Transaction error:%d\n", ret);
-          break;
-        }
+      // ret = bin_input_res_check(g_recv_buff, res_len);
+      // if (ret != 0)
+      //   {
+      //     printf("Transaction error:%d\n", ret);
+      //     break;
+      //   }
+        up_mdelay(5);
     }
 
     if (ret == 0)

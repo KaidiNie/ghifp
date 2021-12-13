@@ -30,7 +30,7 @@
 #define MQUEUE_MSG_MAX (8)
 #define MQUEUE_MODE    0666
 
-#define RECV_TIMEOUT_SEC (3) /* Change from 3 for spi wake up test */
+#define RECV_TIMEOUT_SEC (2) /* Change from 3 for spi wake up test */
 
 #define BUS_REQ (PIN_PWM0)
 

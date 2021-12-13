@@ -296,6 +296,7 @@ int ghifp_cmd_entry(int argc, FAR char *argv[])
             uint8_t bin_cmd = (uint8_t)atoi(argv[1]);
             ret = gacrux_cmd_spiwrite(bin_cmd, opr, (uint16_t)(argc - 2));
             int res_len = gacrux_cmd_spiread();
+            up_mdelay(5);
 
             if (res_len < 0 && bin_cmd == 0 && (opr[0] == 2))
             {

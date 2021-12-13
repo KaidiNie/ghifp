@@ -11,6 +11,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+// #define Bit16Test
 #define HOST_IF_SET_CONFIG_REQ_SETADDR    (1)
 #define HOST_IF_SET_CONFIG_REQ_SETDFS     (2)
 #define HOST_IF_SET_CONFIG_REQ_DBGRECV    (3)

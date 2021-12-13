@@ -201,11 +201,44 @@ static int i2c_recv_task(int argc, FAR char *argv[])
       /* Read data. */
 #ifdef BUS_REQ_ENABLE
 
-      int rec_size = GHIFP_DATA_SIZE(opr_len);
+      int rec_size = GHIFP_DATA_SIZE(opr_len) + GHIFP_HEADER_SIZE;
       int num = rec_size / 512 + ((rec_size % 512) ? 0 : -1);
       // printf("rec_size: %d, packet: %d\n", rec_size, num);
 
-      while(num--) {
+      int first = 1;
+      int finished_size = GHIFP_HEADER_SIZE;
+      while (num--)
+      {
+        if (first) {
+          ret = i2c_read(g_dev, &config,
+                     g_i2c_local_buf + finished_size,
+                     512 - GHIFP_HEADER_SIZE);
+          while (ret != 0)
+            {
+              printf("Failed to read data0:%d\n", ret);
+              ret = i2c_read(g_dev, &config,
+                      g_i2c_local_buf + finished_size,
+                      512 - GHIFP_HEADER_SIZE);
+            }
+            first = 0;
+            finished_size += 512 - GHIFP_HEADER_SIZE;
+        }
+        else
+        {
+          ret = i2c_read(g_dev, &config,
+                     g_i2c_local_buf + finished_size,
+                     512);
+          while (ret != 0)
+            {
+              printf("Failed to read data0:%d\n", ret);
+              ret = i2c_read(g_dev, &config,
+                      g_i2c_local_buf + finished_size,
+                      512);
+              // continue;
+            }
+            finished_size += 512;
+        }
+
         ret = bus_req_wait_i2c();
         if (ret != 0)
           {
@@ -213,39 +246,27 @@ static int i2c_recv_task(int argc, FAR char *argv[])
             continue;
           }
         // printf("Detect Bus Request.(2)\n");
+      }
 
+      int read_size = rec_size % 512;
+      if (first) {
+        read_size = (rec_size - GHIFP_HEADER_SIZE) % 512;
+      }
+
+       if (read_size) {
+        //  ret = i2c_read(g_dev, &config,
+        //                 g_i2c_local_buf + GHIFP_HEADER_SIZE + 512 * (int)(rec_size / 513),
+        //                 read_size);
         ret = i2c_read(g_dev, &config,
-                     g_i2c_local_buf + GHIFP_HEADER_SIZE,
-                     512);
-        while (ret != 0)
-          {
-            printf("Failed to read data0:%d\n", ret);
-            ret = i2c_read(g_dev, &config,
-                     g_i2c_local_buf + GHIFP_HEADER_SIZE,
-                     512);
-            // continue;
+              g_i2c_local_buf + finished_size, read_size);
+         while (ret != 0)
+         {
+           printf("Failed to read data:%d\n", ret);
+           ret = i2c_read(g_dev, &config,
+                          g_i2c_local_buf + finished_size, read_size);
+           // continue;
           }
        }
-
-       ret = bus_req_wait_i2c();
-        if (ret != 0)
-          {
-            printf("Failed to wait bus req:%d\n", ret);
-            continue;
-          }
-        // printf("Detect Bus Request.(3)\n");
-
-       ret = i2c_read(g_dev, &config,
-                     g_i2c_local_buf + GHIFP_HEADER_SIZE + 512 * (int)(rec_size / 513),
-                     rec_size % 512);
-      while (ret != 0)
-        {
-          printf("Failed to read data:%d\n", ret);
-          ret = i2c_read(g_dev, &config,
-                     g_i2c_local_buf + GHIFP_HEADER_SIZE + 512 * (int)(rec_size / 513),
-                     rec_size % 512);
-          // continue;
-        }
 
       // printf("Data dump.(I2C)\n");
       for (i=0; i<GHIFP_DATA_SIZE(opr_len); i++)
@@ -259,7 +280,7 @@ static int i2c_recv_task(int argc, FAR char *argv[])
       ret = check_data(g_i2c_local_buf + GHIFP_HEADER_SIZE, opr_len);
       if (ret != 0)
         {
-          printf("Invalid data.(I2C)\n");
+          printf("Invalid data.(I2C: %d)\n", opr_len);
           continue;
         }
 
