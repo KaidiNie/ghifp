@@ -35,7 +35,7 @@ static int uart_recv_task(int argc, FAR char *argv[]);
 static int conv_uart_speed_number(uint8_t speed_no);
 static int set_baudrate(int fd, speed_t baudrate);
 static int change_baudrate(uint8_t speed_number);
-static int uart_open(const char *devpath, uint32_t baudrate);
+static int uart_open(const char *devpath, speed_t baudrate);
 static int uart_close(int fd);
 static int host_if_uart_write(
   FAR struct host_if_s *thiz, FAR uint8_t *data, uint32_t sz);
@@ -167,7 +167,7 @@ static int uart_recv_task(int argc, FAR char *argv[])
                   continue;
                 }
 
-              printf("Received dataframe completely. total_sz:%u\n",
+              printf("Received dataframe completely. total_sz:%lu\n",
                      total_sz);
 
               /* Completed to receive dataframe. */
@@ -374,7 +374,7 @@ static int host_if_uart_write(
   uint16_t opr_len;
   uint32_t total_sz = 0;
 
-  printf("host_if_uart_write() len=%d\n", sz);
+  printf("host_if_uart_write() len=%ld\n", sz);
 
   if (!thiz || !data || !sz)
     {
@@ -427,7 +427,7 @@ static int host_if_uart_read(
   int      ret = -EINVAL;
   uint32_t res_len;
 
-  printf("host_if_uart_read() buflen=%d\n", sz);
+  printf("host_if_uart_read() buflen=%ld\n", sz);
 
   if (!thiz || !buf || !sz)
     {
@@ -443,7 +443,7 @@ static int host_if_uart_read(
     }
   else
     {
-      printf("Response dataframe len:%d\n", res_len);
+      printf("Response dataframe len:%ld\n", res_len);
       return res_len;
     }
 }
@@ -461,7 +461,7 @@ static int host_if_uart_transaction(
   uint16_t opr_len;
   uint32_t total_sz = 0;
 
-  printf("UART transaction. write len=%d, read len=%d\n", w_sz, r_sz);
+  printf("UART transaction. write len=%ld, read len=%ld\n", w_sz, r_sz);
 
   if (!thiz || !data || !w_sz || !buf || !r_sz || !res_len)
     {
@@ -505,7 +505,7 @@ static int host_if_uart_transaction(
     }
   else
     {
-      printf("Response dataframe len:%d\n", df_len);
+      printf("Response dataframe len:%ld\n", df_len);
       *res_len = df_len;
     }
 
@@ -522,7 +522,7 @@ static int host_if_uart_dbg_write(
   int      fd;
   uint32_t total_sz = 0;
 
-  printf("host_if_uart_dbg_write() len=%d\n", sz);
+  printf("host_if_uart_dbg_write() len=%ld\n", sz);
 
   if (!thiz || !data || !sz)
     {

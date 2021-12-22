@@ -2,6 +2,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <nuttx/arch.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -170,7 +173,7 @@ static int str_to_bin(char *str, uint32_t str_len,
 
   if (binbufflen < str_to_bin_len)
     {
-      printf("Buffer is too small. str:%d,bin:%d\n", str_len, binbufflen);
+      printf("Buffer is too small. str:%ld,bin:%ld\n", str_len, binbufflen);
       return -1;
     }
 
@@ -212,7 +215,7 @@ static int calc_file_sz(FAR const char *file_path)
   file_sz = lseek(fd, 0, SEEK_END); /* Calc file size. */
   if (0 < file_sz)
     {
-      printf("File size:%u\n", file_sz);
+      printf("File size:%lu\n", file_sz);
     }
 
   close(fd);
@@ -329,7 +332,7 @@ static int tx_fw_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -364,7 +367,7 @@ static int bin_input_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -414,7 +417,7 @@ static int execute_fw_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -470,7 +473,7 @@ static int uartconf_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -549,7 +552,7 @@ static int i2cconf_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -604,7 +607,7 @@ static int spiconf_res_check(uint8_t *res, uint32_t res_len)
     }
   else
     {
-      printf("Unexpected res_len:%d\n", res_len);
+      printf("Unexpected res_len:%ld\n", res_len);
       ret = -EIO;
       goto errout;
     }
@@ -852,7 +855,7 @@ int gacrux_cmd_tx_fw(const char *fw_path)
 
       if (ret != pkt_len)
         {
-          printf("File read error. len:%d expected len:%u\n", ret, pkt_len);
+          printf("File read error. len:%u expected len:%lu\n", ret, pkt_len);
           ret = -EIO;
           break;
         }
@@ -863,7 +866,7 @@ int gacrux_cmd_tx_fw(const char *fw_path)
 
       /* -- Create command -- */
 
-      printf("Packet(%d/%d) fw part size:%d\n", i+1, loop_num, pkt_len);
+      printf("Packet(%d/%d) fw part size:%ld\n", i+1, loop_num, pkt_len);
 
       ret = host->transaction(host, cmd, TXFW_CMD_SIZE(pkt_len),
                               g_recv_buff, RECV_BUFF_SZ, &res_len);
@@ -998,7 +1001,7 @@ int gacrux_cmd_uartconf(uint8_t baudrate, uint8_t flow_ctrl)
   res_len = host->read(host, g_recv_buff, RECV_BUFF_SZ);
   if (res_len < 0)
     {
-      printf("Read error:%d\n", res_len);
+      printf("Read error:%ld\n", res_len);
       ret = res_len;
       goto exit;
     }
@@ -1195,7 +1198,7 @@ int gacrux_cmd_spiconf(uint8_t dfs)
   res_len = host->read(host, g_recv_buff, RECV_BUFF_SZ);
   if (res_len < 0)
     {
-      printf("Read error:%d\n", res_len);
+      printf("Read error:%ld\n", res_len);
       ret = res_len;
       goto exit;
     }
@@ -1363,7 +1366,7 @@ int gacrux_cmd_debug_file_send(const char *path)
   ret = read(fd, cmd, file_sz);
   if (ret != file_sz)
     {
-      printf("File read error. len:%d expected len:%u\n", ret, file_sz);
+      printf("File read error. len:%d expected len:%lu\n", ret, file_sz);
       ret = -EIO;
       goto exit;
     }
@@ -1451,7 +1454,7 @@ int gacrux_cmd_debug_tx_fw(uint32_t virtual_file_sz, uint16_t div_sz,
   CHECKINIT();
 
   printf("Start program transfer for debug.\n");
-  printf("Virtual file size = %u\n"
+  printf("Virtual file size = %lu\n"
          "Division size     = %u\n"
          "Total packet type = %u\n"
          "Packet No type    = %u\n",
@@ -1553,7 +1556,7 @@ int gacrux_cmd_debug_tx_fw(uint32_t virtual_file_sz, uint16_t div_sz,
         calc_checksum(&cmd[GHIFP_OPR_OFFSET], TXFW_OPR_SIZE(pkt_len));
       /* -- Create command -- */
 
-      printf("Packet(%d/%d) fw part size:%d\n", i+1, total_pkt_num, pkt_len);
+      printf("Packet(%d/%d) fw part size:%ld\n", i+1, total_pkt_num, pkt_len);
 
       ret = host->transaction(host, cmd, TXFW_CMD_SIZE(pkt_len),
                               g_recv_buff, RECV_BUFF_SZ, &res_len);
@@ -1605,11 +1608,11 @@ int gacrux_cmd_bin_input(uint8_t input, const char *fw_path)
 
   CHECKINIT();
   char path[] = "/mnt/spif/";
-  strcat(path, fw_path);
-  if (!path)
+  if (!fw_path)
   {
     return -EINVAL;
-    }
+  }
+  strcat(path, fw_path);
 
   file_sz = calc_file_sz(path);
   if (file_sz < 0)
@@ -1662,10 +1665,10 @@ int gacrux_cmd_bin_input(uint8_t input, const char *fw_path)
       *(uint16_t *)&cmd[7] = i+1;
 
       ret = read(fd, &cmd[8], pkt_len);
-       printf("pkt_len:%d \n", pkt_len);
+      printf("pkt_len:%ld\n", pkt_len);
       if (ret != pkt_len)
         {
-          printf("File read error. len:%d expected len:%u\n", ret, pkt_len);
+          printf("File read error. len:%d expected len:%lu\n", ret, pkt_len);
           ret = -EIO;
           break;
         }
@@ -1675,7 +1678,7 @@ int gacrux_cmd_bin_input(uint8_t input, const char *fw_path)
         calc_checksum(&cmd[GHIFP_OPR_OFFSET], TXFW_OPR_SIZE(pkt_len)-1);
       /* -- Create command -- */
 
-      printf("Packet(%d/%d) fw part size:%d\n", i+1, loop_num, pkt_len);
+      printf("Packet(%d/%d) fw part size:%ld\n", i+1, loop_num, pkt_len);
       ret = host->transaction(host, cmd + GHIFP_HEADER_SIZE, pkt_len + 4,
                           g_recv_buff, RECV_BUFF_SZ, &res_len);
       // ret = host->write(host, cmd + GHIFP_HEADER_SIZE,  pkt_len + 4);

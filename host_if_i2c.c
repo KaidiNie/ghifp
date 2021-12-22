@@ -87,7 +87,7 @@ static int i2c_recv_task(int argc, FAR char *argv[])
 
   memset(g_i2c_local_buf, 0, LOCAL_BUFF_SZ);
 
-  printf("I2C frequency(recv):%u\n", g_i2c_freq);
+  printf("I2C frequency(recv):%lu\n", g_i2c_freq);
 
   if (!g_dev)
     {
@@ -372,7 +372,7 @@ static int change_speed(uint8_t speed_number)
     }
   else
     {
-      printf("Change speed. %u -> %u\n", g_i2c_freq, (uint32_t)ret);
+      printf("Change speed. %lu -> %lu\n", g_i2c_freq, (uint32_t)ret);
       g_i2c_freq = (uint32_t)ret;
     }
 
@@ -425,7 +425,7 @@ static int host_if_i2c_write(
   uint8_t             opc;
   uint16_t            opr_len;
 
-  printf("host_if_i2c_write() len=%d\n", sz);
+  printf("host_if_i2c_write() len=%ld\n", sz);
 
   if (!thiz || !data || !sz)
     {
@@ -447,7 +447,7 @@ static int host_if_i2c_write(
       return ret;
     }
 
-  printf("I2C frequency:%u\n", g_i2c_freq);
+  printf("I2C frequency:%lu\n", g_i2c_freq);
 
   config.frequency = g_i2c_freq;
   config.address   = g_targetaddr;
@@ -474,7 +474,7 @@ static int host_if_i2c_read(
   int      ret = -EINVAL;
   uint32_t res_len;
 
-  printf("host_if_i2c_read() buflen=%d\n", sz);
+  printf("host_if_i2c_read() buflen=%ld\n", sz);
 
   if (!thiz || !buf || !sz)
     {
@@ -490,7 +490,7 @@ static int host_if_i2c_read(
     }
   else
     {
-      printf("Response dataframe len:%d\n", res_len);
+      printf("Response dataframe len:%ld\n", res_len);
       return res_len;
     }
 }
@@ -507,7 +507,7 @@ static int host_if_i2c_transaction(
   uint8_t             opc;
   uint16_t            opr_len;
 
-  printf("I2C transaction. write len=%d, read len=%d\n", w_sz, r_sz);
+  printf("I2C transaction. write len=%ld, read len=%ld\n", w_sz, r_sz);
 
   if (!thiz || !data || !w_sz || !buf || !r_sz || !res_len)
     {
@@ -529,7 +529,7 @@ static int host_if_i2c_transaction(
       return ret;
     }
 
-  printf("I2C frequency:%u\n", g_i2c_freq);
+  printf("I2C frequency:%lu\n", g_i2c_freq);
 
   config.frequency = g_i2c_freq;
   config.address   = g_targetaddr;
@@ -554,7 +554,7 @@ static int host_if_i2c_transaction(
     }
   else
     {
-      printf("Response dataframe len:%d\n", df_len);
+      printf("Response dataframe len:%ld\n", df_len);
       *res_len = df_len;
     }
 
@@ -569,7 +569,7 @@ static int host_if_i2c_dbg_write(
   int                 ret = -EINVAL;
   struct i2c_config_s config;
 
-  printf("host_if_i2c_dbg_write() len=%d\n", sz);
+  printf("host_if_i2c_dbg_write() len=%ld\n", sz);
 
   if (!thiz || !data || !sz)
     {
@@ -581,7 +581,7 @@ static int host_if_i2c_dbg_write(
       return -EPERM;
     }
 
-  printf("I2C frequency:%u\n", g_i2c_freq);
+  printf("I2C frequency:%lu\n", g_i2c_freq);
 
   config.frequency = g_i2c_freq;
   config.address   = g_targetaddr;

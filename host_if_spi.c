@@ -2,6 +2,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <nuttx/arch.h>
+
 #include <sdk/config.h>
 
 #include <stdio.h>
@@ -95,12 +98,11 @@ static int spi_recv_task(int argc, FAR char *argv[])
   int         ret;
   int         i;
   int         read_len;
-  int         read_len_tmp;
-  uint8_t     opc;
+  uint8_t     opc = 0;
   uint16_t    opr_len;
   int         finished_size = 0;
   memset(g_spi_local_buf, 0, LOCAL_BUFF_SZ);
-  printf("SPI frequency(recv):%u\n", g_spi_freq);
+  printf("SPI frequency(recv):%lu\n", g_spi_freq);
 
   if (!g_dev)
     {
@@ -516,7 +518,7 @@ static int set_clock(int clk_no)
   new_clock = conv_spi_clk_number(clk_no);
   if (0 < new_clock)
     {
-      printf("Change SPI frequency. %u -> %d\n", g_spi_freq, new_clock);
+      printf("Change SPI frequency. %lu -> %ld\n", g_spi_freq, new_clock);
       g_spi_freq = (uint32_t)new_clock;
       SPI_LOCK(g_dev, true);
       SPI_SETFREQUENCY(g_dev, g_spi_freq);
@@ -576,7 +578,7 @@ static int host_if_spi_read(
   int      ret = -EINVAL;
   uint32_t res_len;
 
-  printf("host_if_spi_read() buflen=%d\n", sz);
+  printf("host_if_spi_read() buflen=%ld\n", sz);
 
   if (!thiz || !buf || !sz)
     {
@@ -592,7 +594,7 @@ static int host_if_spi_read(
     }
   else
     {
-      printf("Response dataframe len:%d\n", res_len);
+      printf("Response dataframe len:%ld\n", res_len);
       return res_len;
     }
 }
@@ -605,10 +607,10 @@ static int host_if_spi_transaction(
 {
   int      ret = -EINVAL;
   uint32_t df_len;
-  uint8_t  opc;
-  uint16_t opr_len;
+//  uint8_t  opc;
+//  uint16_t opr_len;
 
-  printf("SPI transaction. write len=%d, read len=%d\n", w_sz, r_sz);
+  printf("SPI transaction. write len=%ld, read len=%ld\n", w_sz, r_sz);
 
   if (!thiz || !data || !w_sz || !buf || !r_sz || !res_len)
     {
@@ -645,7 +647,7 @@ static int host_if_spi_transaction(
     }
   else
     {
-      printf("Response dataframe len:%d\n", df_len);
+      printf("Response dataframe len:%ld\n", df_len);
       *res_len = df_len;
     }
 
@@ -659,7 +661,7 @@ static int host_if_spi_dbg_write(
 {
   int ret = -EINVAL;
 
-  printf("host_if_spi_dbg_write() len=%d\n", sz);
+  printf("host_if_spi_dbg_write() len=%ld\n", sz);
 
   if (!thiz || !data || !sz)
     {

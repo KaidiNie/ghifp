@@ -35,7 +35,7 @@ static FAR struct host_if_s *g_host_list[HOST_IF_FCTRY_TYPE_NUM] = {0};
 
 int host_if_fctry_init(hostif_evt_cb evt_cb)
 {
-  int ret;
+  int ret = 0;
   printf("[IN]host_if_fctry_init %d\n", ret);
   ret = create_df_queue();
   if (ret < 0)
