@@ -285,7 +285,7 @@ int ghifp_cmd_entry(int argc, FAR char *argv[])
           switch (gacrux_cmd_get_if_type())
           {
           case HOST_IF_FCTRY_TYPE_UART:
-            gacrux_cmd_debug_send(opr, (uint16_t)(argc - 2));
+            gacrux_cmd_debug_send((char *)opr, (uint16_t)(argc - 2));
             break;
           case HOST_IF_FCTRY_TYPE_I2C:
             ret = gacrux_cmd_i2cwrite((uint8_t)atoi(argv[1]), opr,

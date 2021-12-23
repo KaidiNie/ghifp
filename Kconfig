@@ -4,7 +4,7 @@
 #
 
 config EXAMPLES_GHIFP
-	bool "Gacrux Host I/F protocol test"
+	tristate "Gacrux Host I/F protocol test"
 	default y
 	---help---
 		Enable the Gacrux Host I/F protocol test
@@ -14,7 +14,6 @@ if EXAMPLES_GHIFP
 config EXAMPLES_GHIFP_PROGNAME
 	string "Program name"
 	default "ghifp"
-	depends on BUILD_KERNEL
 	---help---
 		This is the name of the program that will be use when the NSH ELF
 		program is installed.
