@@ -490,11 +490,7 @@ int ghifp_cmd_entry(int argc, FAR char *argv[])
  * ghifp_main
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
 int main(int argc, FAR char *argv[])
-#else
-int ghifp_main(int argc, char *argv[])
-#endif
 {
   int ret;
   // dump_arg(argc, argv);
