@@ -33,7 +33,7 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+include $(APPDIR)/Make.defs
 -include $(SDKDIR)/Make.defs
 
 # Gacrux Host I/F protocol test built-in application info
@@ -41,18 +41,21 @@
 CONFIG_EXAMPLES_GHIFP_PRIORITY ?= SCHED_PRIORITY_DEFAULT
 CONFIG_EXAMPLES_GHIFP_STACKSIZE ?= 2048
 
-APPNAME = ghifp
-PRIORITY = $(CONFIG_EXAMPLES_GHIFP_PRIORITY)
+PROGNAME  = $(CONFIG_EXAMPLES_GHIFP_PROGNAME)
+PRIORITY  = $(CONFIG_EXAMPLES_GHIFP_PRIORITY)
 STACKSIZE = $(CONFIG_EXAMPLES_GHIFP_STACKSIZE)
+MODULE    = $(CONFIG_EXAMPLES_GHIFP)
 
 # Gacrux Host I/F protocol test Example
 
-CFLAGS += -I$(SDKDIR)/bsp/src # Temp for I2C
-CFLAGS += -I$(SDKDIR)/../nuttx/arch/$(CONFIG_ARCH)/include/$(CONFIG_ARCH_CHIP) # Temp GPIO irq
+# Temp for I2C
+#CFLAGS += -I$(SDKDIR)/bsp/src
+# Temp GPIO irq
+#CFLAGS += -I$(SDKDIR)/../nuttx/arch/$(CONFIG_ARCH)/include/$(CONFIG_ARCH_CHIP)
 
-ARCH_DIR = arch/
-ARCH_SRC = $(ARCH_DIR)/src
-ARCH_INC = $(ARCH_DIR)/include
+#ARCH_DIR = arch/
+#ARCH_SRC = $(ARCH_DIR)/src
+#ARCH_INC = $(ARCH_DIR)/include
 
 ASRCS =
 CSRCS += gacrux_cmd.c
@@ -62,8 +65,5 @@ CSRCS += host_if_uart.c
 CSRCS += host_if_i2c.c
 CSRCS += host_if_spi.c
 MAINSRC = ghifp_main.c
-
-CONFIG_EXAMPLES_GHIFP_PROGNAME ?= ghifp$(EXEEXT)
-PROGNAME = $(CONFIG_EXAMPLES_GHIFP_PROGNAME)
 
 include $(APPDIR)/Application.mk
