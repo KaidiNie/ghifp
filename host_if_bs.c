@@ -33,7 +33,8 @@
 #define RECV_TIMEOUT_SEC (2) /* Change from 3 for spi wake up test */
 
 #define BUS_REQ (PIN_PWM0)
-
+// #define BUS_REQ (PIN_SEN_IRQ_IN)
+// #define BUS_REQ (PIN_EMMC_DATA3)
  /****************************************************************************
  * Private Types
  ****************************************************************************/

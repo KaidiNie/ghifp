@@ -111,7 +111,6 @@ static int spi_recv_task(int argc, FAR char *argv[])
 
   while (1)
     {
-      // printf("(1)\n");
       ret = bus_req_wait_spi();
       if (ret != 0)
         {
@@ -163,35 +162,6 @@ static int spi_recv_task(int argc, FAR char *argv[])
         }
       UNLOCK();
 
-      // for data split method, temporary comment out
-      // int rec_size = GHIFP_DATA_SIZE(opr_len);
-      // ret = bus_req_wait_spi();
-      // if (ret != 0) {
-      //   printf("Failed to wait bus req:%d\n", ret);
-      //   continue;
-      // }
-      // LOCK();
-
-      // up_mdelay(2);
-
-      // one time read no delay
-      // read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE, rec_size);
-      // if (read_len != rec_size)
-      // {
-      //   printf("Failed to read data:%d\n", ret);
-      //   }
-
-      // add delay
-      // int remain_size = rec_size;
-      // int sent_size = 0;
-      // while (remain_size) {
-      //   int send_size = (remain_size < 20) ? remain_size : 20;
-      //   read_len = spi_read(g_spi_local_buf + GHIFP_HEADER_SIZE + sent_size, send_size);
-      //   sent_size += send_size;
-      //   remain_size -= send_size;
-      //   up_mdelay(1);
-      // }
-
       // send every 1024byte
       int rec_size = GHIFP_DATA_SIZE(opr_len) + GHIFP_HEADER_SIZE;
 
@@ -199,7 +169,7 @@ static int spi_recv_task(int argc, FAR char *argv[])
       int align = (rec_size % 2) ? 1 : 0;
       rec_size += (align + 2);
 #else
-      // rec_size += 1;
+      rec_size += 1;
 #endif
 
       int num = rec_size / 1024 + ((rec_size % 1024) ? 0 : -1);

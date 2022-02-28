@@ -71,6 +71,8 @@ do                                          \
 #define PKT_NO_TYPE_OVER_TOTAL_NUM      (4) /* 1, 2, 3, 4, "5" */
 #define PKT_NO_TYPE_MAX                 (PKT_NO_TYPE_OVER_TOTAL_NUM)
 
+#define WAKE_UP_PKT_SIZE                (64)
+
  /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -94,6 +96,18 @@ static sem_t                     g_chgstat_evt_sem;
 
 static uint16_t                  g_tx_fw_one_packet_sz = TX_FW_ONE_PACKET_SZ;
 static uint16_t                  g_bin_input_one_packet_sz = BIN_INPUT_ONE_PACKET_SZ;
+
+static uint8_t wake[WAKE_UP_PKT_SIZE] = {
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+  0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -126,28 +140,28 @@ static int8_t OprLength[160] = {
     [0x05] = 1, [0x06] = 0, [0x07] = -1, [0x08] = 3, [0x09] = 3,
     [0x0a] = -99, [0x0b] = 2, [0x0c] = -99, [0x0d] = -99, [0x0e] = -99,
     [0x0f] = -99,
-    [0x10] = 1, [0x11] = 4, [0x12] = 2, [0x13] = 0, [0x14] = 0,
-    [0x15] = 1, [0x16] = 2, [0x17] = 4, [0x18] = -99, [0x19] = -99,
+    [0x10] = 1, [0x11] = 2, [0x12] = 4, [0x13] = 0, [0x14] = 0,
+    [0x15] = 1, [0x16] = 2, [0x17] = 4, [0x18] = 4, [0x19] = -99,
     [0x1a] = -99, [0x1b] = -99, [0x1c] = -99, [0x1d] = -99, [0x1e] = -99,
     [0x1f] = -99,
     [0x20] = -99, [0x21] = -99, [0x22] = -99, [0x23] = -99, [0x24] = -99,
     [0x25] = -99, [0x26] = -99, [0x27] = -99, [0x28] = -99, [0x29] = -99,
     [0x2a] = -99, [0x2b] = -99, [0x2c] = -99, [0x2d] = -99, [0x2e] = -99,
     [0x2f] = -99,
-    [0x30] = 1, [0x31] = 0, [0x32] = 2, [0x33] = 0, [0x34] = -99,
+    [0x30] = 1, [0x31] = 0, [0x32] = 2, [0x33] = 0, [0x34] = -1,
     [0x35] = 12, [0x36] = 8, [0x37] = 4, [0x38] = 0, [0x39] = 2,
     [0x3a] = 7, [0x3b] = 0, [0x3c] = 3, [0x3d] = 5, [0x3e] = 1,
     [0x3f] = 1,
-    [0x40] = 3, [0x41] = 1, [0x42] = 11, [0x43] = 0, [0x44] = 6,
-    [0x45] = -99, [0x46] = -99, [0x47] = -99, [0x48] = -99, [0x49] = -99,
+    [0x40] = 1, [0x41] = 0, [0x42] = 11, [0x43] = 0, [0x44] = 6,
+    [0x45] = 4, [0x46] = -99, [0x47] = -99, [0x48] = -99, [0x49] = -99,
     [0x4a] = -99, [0x4b] = -99, [0x4c] = -99, [0x4d] = -99, [0x4e] = -99,
     [0x4f] = -99,
     [0x50] = 1, [0x51] = 0, [0x52] = 1, [0x53] = 1, [0x54] = 0,
     [0x55] = 1, [0x56] = 2, [0x57] = -99, [0x58] = -99, [0x59] = -99,
     [0x5a] = -99, [0x5b] = -99, [0x5c] = -99, [0x5d] = -99, [0x5e] = -99,
     [0x5f] = -99,
-    [0x60] = -99, [0x61] = -99, [0x62] = -99, [0x63] = -99, [0x64] = -99,
-    [0x65] = -99, [0x66] = -99, [0x67] = -99, [0x68] = -99, [0x69] = -99,
+    [0x60] = 2, [0x61] = 1, [0x62] = 0, [0x63] = 0, [0x64] = 0,
+    [0x65] = 0, [0x66] = -99, [0x67] = -99, [0x68] = -99, [0x69] = -99,
     [0x6a] = -99, [0x6b] = -99, [0x6c] = -99, [0x6d] = -99, [0x6e] = -99,
     [0x6f] = -99,
     [0x70] = -99, [0x71] = -99, [0x72] = -99, [0x73] = -99, [0x74] = -99,
@@ -505,10 +519,10 @@ static int i2cconf_cmd_create(uint8_t *buf, uint32_t buf_len,
 static int cmd_create(uint8_t *buf, uint8_t bin_cmd, uint8_t *opr,
                                 uint16_t opr_len)
 {
-  // if (!buf || (OprLength[bin_cmd] == -99))
-  //   {
-  //     return -EINVAL;
-  //   }
+  if (!buf || (OprLength[bin_cmd] == -99))
+    {
+      return -EINVAL;
+    }
 
   buf[GHIFP_SYNC_OFFSET]       = GHIFP_SYNC;
   *(uint16_t *)&buf[GHIFP_OPR_LEN_OFFSET] = opr_len;
@@ -1098,7 +1112,7 @@ int gacrux_cmd_i2cwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
 
   uint8_t buf[GHIFP_HEADER_SIZE + ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):GHIFP_HEADER_SIZE)];
 
-  if (OprLength[bin_cmd] == opr_len) {
+  if (OprLength[bin_cmd] == opr_len || OprLength[bin_cmd] == -1) {
     cmd_create(buf, bin_cmd, opr, opr_len);
     for (int j = 0; j < ((opr_len > 0)?(GHIFP_HEADER_SIZE + GHIFP_DATA_SIZE(opr_len)):5); j++)
     {
@@ -1250,9 +1264,12 @@ int gacrux_cmd_spiwrite(uint8_t bin_cmd, uint8_t *opr, uint16_t opr_len)
     }
 #else
     ret = host->write(host, buf + GHIFP_HEADER_SIZE, GHIFP_DATA_SIZE(opr_len));
+    if (bin_cmd == 0 && (opr[0] == 2)) {
+      ret = host->write(host, wake, WAKE_UP_PKT_SIZE);
+    }
 #endif
   }
-  // up_mdelay(5);
+  up_mdelay(5);
   return ret;
 }
 
